@@ -22,6 +22,7 @@ short_description: Create/delete a DNS record in DigitalOcean
 description:
      - Create/delete a DNS record in DigitalOcean.
 version_added: "1.6"
+author: "Michael Gregson (@mgregson)"
 options:
   state:
     description:
@@ -128,7 +129,7 @@ class Domain(JsonfyMixIn):
         self.manager.destroy_domain(self.id)
 
     def records(self):
-        json = self.manager.all_domain_records(self.id)
+        json = self.manager.all_domain_records(self.name)
         return map(DomainRecord, json)
 
     @classmethod
