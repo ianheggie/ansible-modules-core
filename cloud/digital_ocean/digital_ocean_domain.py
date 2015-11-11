@@ -126,7 +126,7 @@ class Domain(JsonfyMixIn):
         self.__dict__.update(domain_json)
 
     def destroy(self):
-        self.manager.destroy_domain(self.id)
+        self.manager.destroy_domain(self.name)
 
     def records(self):
         json = self.manager.all_domain_records(self.name)
