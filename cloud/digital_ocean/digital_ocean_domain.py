@@ -129,7 +129,7 @@ class Domain(JsonfyMixIn):
         self.manager.destroy_domain(self.id)
 
     def records(self):
-        json = self.manager.all_domain_records(self.id)
+        json = self.manager.all_domain_records(self.name)
         return map(DomainRecord, json)
 
     @classmethod
