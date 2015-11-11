@@ -29,12 +29,9 @@ options:
      - Indicate desired state of the target.
     default: present
     choices: ['present', 'absent']
-  client_id:
-     description:
-     - DigitalOcean manager id.
-  api_key:
+  api_token:
     description:
-     - DigitalOcean api key.
+     - DigitalOcean api token.
   id:
     description:
      - Numeric, the SSH key id you want to operate on.
@@ -46,8 +43,9 @@ options:
      - The public SSH key you want to add to your account.
 
 notes:
-  - Two environment variables can be used, DO_CLIENT_ID and DO_API_KEY.
-  - Version 1 of DigitalOcean API is used.
+  - Two environment variables can be used, DO_API_KEY and DO_API_TOKEN. They both refer to the v2 token.
+  - As of Ansible 2.0, Version 2 of the DigitalOcean API is used.
+  - As of Ansible 2.0, the above parameters were changed significantly. If you are running 1.9.x or earlier, please use C(ansible-doc digital_ocean_v2) to view the correct parameters for your version. Dedicated web docs will be available in the near future for the stable branch.
 requirements:
   - "python >= 2.6"
   - dopy
@@ -63,17 +61,20 @@ EXAMPLES = '''
       state=present
       name=my_ssh_key
       ssh_pub_key='ssh-rsa AAAA...'
-      client_id=XXX
-      api_key=XXX
+      api_token=XXX
 
 '''
 
 import os
 import time
+from distutils.version import LooseVersion
 
+HAS_DOPY = True
 try:
+    import dopy
     from dopy.manager import DoError, DoManager
-    HAS_DOPY = True
+    if LooseVersion(dopy.__version__) < LooseVersion('0.3.2'):
+        HAS_DOPY = False
 except ImportError:
     HAS_DOPY = False
 
@@ -98,8 +99,8 @@ class SSH(JsonfyMixIn):
         return True
 
     @classmethod
-    def setup(cls, client_id, api_key):
-        cls.manager = DoManager(client_id, api_key)
+    def setup(cls, api_token):
+        cls.manager = DoManager(None, api_token, api_version=2)
 
     @classmethod
     def find(cls, name):
@@ -129,16 +130,14 @@ def core(module):
         return v
 
     try:
-        # params['client_id'] will be None even if client_id is not passed in
-        client_id = module.params['client_id'] or os.environ['DO_CLIENT_ID']
-        api_key = module.params['api_key'] or os.environ['DO_API_KEY']
+        api_token = module.params['api_token'] or os.environ['DO_API_TOKEN'] or os.environ['DO_API_KEY']
     except KeyError, e:
         module.fail_json(msg='Unable to load %s' % e.message)
 
     changed = True
     state = module.params['state']
 
-    SSH.setup(client_id, api_key)
+    SSH.setup(api_token)
     name = getkeyordie('name')
     if state in ('present'):
         key = SSH.find(name)
@@ -158,8 +157,7 @@ def main():
     module = AnsibleModule(
         argument_spec = dict(
             state = dict(choices=['present', 'absent'], default='present'),
-            client_id = dict(aliases=['CLIENT_ID'], no_log=True),
-            api_key = dict(aliases=['API_KEY'], no_log=True),
+            api_token = dict(aliases=['API_TOKEN'], no_log=True),
             name = dict(type='str'),
             id = dict(aliases=['droplet_id'], type='int'),
             ssh_pub_key = dict(type='str'),
